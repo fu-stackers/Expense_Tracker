@@ -25,10 +25,27 @@ export class ExpenseService {
     });
   }
 
-  findAll() {
-    return this.prisma.expense.findMany({ orderBy: { createdAt: 'desc' } });
-  }
+  findAll(category?: string, startDate?: string, endDate?: string) {
+    const where: Prisma.ExpenseWhereInput = {};
 
+    if (category) {
+      where.category = category;
+    }
+
+    if (startDate || endDate) {
+      where.date = {
+        ...(startDate ? { gte: new Date(startDate) } : {}),
+        ...(endDate ? { lte: new Date(`${endDate}T23:59:59.999Z`) } : {}),
+      };
+    }
+
+    return this.prisma.expense.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
   async findOne(id: number) {
     const expense = await this.prisma.expense.findUnique({ where: { id } });
 
@@ -67,5 +84,26 @@ export class ExpenseService {
       throw new NotFoundException(`Expense with ID ${id} not found`);
     }
     return expense;
+  }
+
+  async getTotalSpending() {
+    const result = await this.prisma.expense.aggregate({
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return {
+      totalSpending: result._sum.amount ?? 0,
+    };
+  }
+  async getSpendingByCategory() {
+    const result = await this.prisma.expense.groupBy({
+      by: ['category'],
+      _sum: {
+        amount: true,
+      },
+    });
+    return result;
   }
 }
