@@ -17,6 +17,7 @@ export class ExpenseService {
 
     return this.prisma.expense.create({
       data: {
+        
         title,
         amount: new Prisma.Decimal(amount),
         category,
